@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-REPO="hbwallet/hbwallet"
+REPO="twilson63/hbwallet"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 TEMP_DIR=$(mktemp -d)
 

@@ -91,11 +91,11 @@ Users can install hbwallet using:
 
 ### Quick Install (recommended)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/hbwallet/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/twilson63/hbwallet/main/install.sh | bash
 ```
 
 ### Manual Download
-1. Go to [Releases](https://github.com/yourusername/hbwallet/releases)
+1. Go to [Releases](https://github.com/twilson63/hbwallet/releases)
 2. Download the appropriate binary for your platform
 3. Extract and install:
    ```bash
@@ -108,19 +108,19 @@ curl -fsSL https://raw.githubusercontent.com/yourusername/hbwallet/main/install.
 
 #### Homebrew (macOS/Linux)
 ```bash
-brew tap yourusername/hbwallet
+brew tap twilson63/hbwallet
 brew install hbwallet
 ```
 
 #### Debian/Ubuntu
 ```bash
-wget https://github.com/yourusername/hbwallet/releases/download/v1.0.0/hbwallet_1.0.0_amd64.deb
+wget https://github.com/twilson63/hbwallet/releases/download/v1.0.0/hbwallet_1.0.0_amd64.deb
 sudo dpkg -i hbwallet_1.0.0_amd64.deb
 ```
 
 #### Build from Source
 ```bash
-git clone https://github.com/yourusername/hbwallet.git
+git clone https://github.com/twilson63/hbwallet.git
 cd hbwallet
 make build
 sudo make install
@@ -132,7 +132,7 @@ All releases include a `checksums.txt` file with SHA256 hashes:
 
 ```bash
 # Download checksums
-curl -LO https://github.com/yourusername/hbwallet/releases/download/v1.0.0/checksums.txt
+curl -LO https://github.com/twilson63/hbwallet/releases/download/v1.0.0/checksums.txt
 
 # Verify your download
 sha256sum -c checksums.txt --ignore-missing

@@ -1,14 +1,14 @@
 class Hbwallet < Formula
   desc "Arweave JWK wallet generator"
-  homepage "https://github.com/yourusername/hbwallet"
+  homepage "https://github.com/twilson63/hbwallet"
   version "1.0.0"
   
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/yourusername/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-darwin-arm64.tar.gz"
+      url "https://github.com/twilson63/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-darwin-arm64.tar.gz"
       sha256 "PLACEHOLDER_SHA256_DARWIN_ARM64"
     else
-      url "https://github.com/yourusername/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-darwin-amd64.tar.gz"
+      url "https://github.com/twilson63/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-darwin-amd64.tar.gz"
       sha256 "PLACEHOLDER_SHA256_DARWIN_AMD64"
     end
   end
@@ -16,14 +16,14 @@ class Hbwallet < Formula
   on_linux do
     if Hardware::CPU.arm?
       if Hardware::CPU.is_64_bit?
-        url "https://github.com/yourusername/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-linux-arm64.tar.gz"
+        url "https://github.com/twilson63/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-linux-arm64.tar.gz"
         sha256 "PLACEHOLDER_SHA256_LINUX_ARM64"
       else
-        url "https://github.com/yourusername/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-linux-arm.tar.gz"
+        url "https://github.com/twilson63/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-linux-arm.tar.gz"
         sha256 "PLACEHOLDER_SHA256_LINUX_ARM"
       end
     else
-      url "https://github.com/yourusername/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-linux-amd64.tar.gz"
+      url "https://github.com/twilson63/hbwallet/releases/download/v1.0.0/hbwallet-1.0.0-linux-amd64.tar.gz"
       sha256 "PLACEHOLDER_SHA256_LINUX_AMD64"
     end
   end

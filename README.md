@@ -23,12 +23,12 @@ A lightweight Lua-based command-line tool for generating Arweave JWK (JSON Web K
 ### Quick Install (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hbwallet/hbwallet/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/twilson63/hbwallet/main/install.sh | bash
 ```
 
 ### Manual Installation
 
-1. Download the latest release for your platform from the [Releases](https://github.com/hbwallet/hbwallet/releases) page
+1. Download the latest release for your platform from the [Releases](https://github.com/twilson63/hbwallet/releases) page
 2. Extract the archive:
    ```bash
    tar -xzf hbwallet-*.tar.gz
@@ -42,7 +42,7 @@ curl -fsSL https://raw.githubusercontent.com/hbwallet/hbwallet/main/install.sh |
 ### Build from Source
 
 ```bash
-git clone https://github.com/hbwallet/hbwallet.git
+git clone https://github.com/twilson63/hbwallet.git
 cd hbwallet
 make build
 sudo make install
