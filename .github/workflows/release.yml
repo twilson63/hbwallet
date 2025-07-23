@@ -1,0 +1,160 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    name: Build Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-amd64
+          - os: ubuntu-latest
+            platform: linux-arm64
+          - os: ubuntu-latest
+            platform: linux-arm
+          - os: macos-latest
+            platform: darwin-amd64
+          - os: macos-latest
+            platform: darwin-arm64
+          - os: windows-latest
+            platform: windows-amd64
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Lua
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: "5.4"
+      
+      - name: Set up LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+      
+      - name: Install dependencies
+        run: |
+          luarocks install lua-json
+          luarocks install luacrypto || echo "Optional dependency"
+      
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "Building version: ${VERSION}"
+        shell: bash
+      
+      - name: Build release
+        run: |
+          chmod +x scripts/build-release.sh
+          VERSION=${{ steps.get_version.outputs.VERSION }} ./scripts/build-release.sh ${{ matrix.platform }}
+        shell: bash
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-${{ matrix.platform }}
+          path: release/*
+  
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: release-artifacts
+      
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find release-artifacts -type f -name "*.tar.gz" -o -name "*.zip" | while read f; do
+            cp "$f" release/
+          done
+          cd release
+          sha256sum *.tar.gz *.zip > checksums.txt || true
+          ls -la
+      
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          release_name: hbwallet ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            # hbwallet ${{ steps.get_version.outputs.VERSION }}
+            
+            Arweave JWK wallet generator built with Hype framework.
+            
+            ## Installation
+            
+            ### Quick install (Unix-like systems)
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | bash
+            ```
+            
+            ### Manual installation
+            1. Download the appropriate binary for your platform
+            2. Extract the archive: `tar -xzf hbwallet-*.tar.gz`
+            3. Move to your PATH: `sudo mv hbwallet /usr/local/bin/`
+            4. Make executable: `sudo chmod +x /usr/local/bin/hbwallet`
+            
+            ## Usage
+            ```bash
+            # Generate new wallet
+            hbwallet > wallet.json
+            
+            # Get wallet address
+            hbwallet public-key --file wallet.json
+            ```
+            
+            ## Checksums
+            Verify your download with the checksums.txt file.
+          draft: false
+          prerelease: false
+      
+      - name: Upload release assets
+        run: |
+          for file in release/*.tar.gz release/*.zip release/checksums.txt; do
+            if [ -f "$file" ]; then
+              echo "Uploading $file..."
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @"$file" \
+                "${{ steps.create_release.outputs.upload_url }}?name=$(basename $file)"
+            fi
+          done

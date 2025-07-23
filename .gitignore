@@ -1,0 +1,30 @@
+# Build artifacts
+hbwallet
+build/
+*.o
+*.so
+*.dylib
+
+# Test files
+*.json
+test-wallet.json
+example-wallet.json
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Lua specific
+luac.out
+*.luac
+
+# Hype framework
+.hype/
+hype-cache/

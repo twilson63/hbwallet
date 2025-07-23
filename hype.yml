@@ -1,0 +1,35 @@
+# Hype framework configuration for hbwallet
+name: hbwallet
+version: 1.0.0
+description: Arweave JWK wallet generator
+
+# Entry point
+main: src/hbwallet.lua
+
+# Output configuration
+output:
+  name: hbwallet
+  type: binary
+  
+# Dependencies
+dependencies:
+  lua-json: "1.3.4"
+  luacrypto: "0.3.2"
+  lua-mime: "1.0.0"
+  
+# Modules to bundle
+modules:
+  - src/hbwallet.lua
+  - src/jwk.lua
+  - src/crypto_openssl.lua
+  
+# Build options
+build:
+  target: native
+  strip: true
+  compress: true
+  
+# Runtime options
+runtime:
+  lua_version: "5.4"
+  luajit: true
