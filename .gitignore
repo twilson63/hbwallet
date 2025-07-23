@@ -1,9 +1,14 @@
 # Build artifacts
-hbwallet
+/hbwallet
+/hbwallet-v*
+/hbwallet.old
 build/
 *.o
 *.so
 *.dylib
+
+# Release directory (all build outputs)
+/release/
 
 # Test files
 *.json
