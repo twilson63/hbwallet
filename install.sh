@@ -103,7 +103,7 @@ get_latest_version() {
         return
     fi
     
-    print_info "Fetching latest version..."
+    print_info "Fetching latest version..." >&2
     
     # For local development/testing
     if [ -f "VERSION" ]; then
@@ -116,7 +116,7 @@ get_latest_version() {
     local version=$(curl -sL "$latest_url" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     
     if [ -z "$version" ]; then
-        print_warning "Could not fetch latest version, using v1.0.0"
+        print_warning "Could not fetch latest version, using v1.0.0" >&2
         version="v1.0.0"
     fi
     
