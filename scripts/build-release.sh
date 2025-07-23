@@ -84,12 +84,11 @@ build_with_hype() {
     cd "$PROJECT_ROOT"
     
     if command -v hype &> /dev/null; then
-        hype build \
-            --input src/hbwallet.lua \
+        # Extract just the OS part for Hype (darwin, linux, windows)
+        local hype_target="${platform%%-*}"
+        hype build main.lua \
             --output "$output_name" \
-            --target "$platform" \
-            --strip \
-            --compress
+            --target "$hype_target"
         return $?
     else
         return 1

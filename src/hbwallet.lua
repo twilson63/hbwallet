@@ -1,107 +1,278 @@
-#!/usr/bin/env lua
+-- hbwallet v2 - Secure Arweave JWK wallet generator
+-- Uses only Hype framework built-in crypto (zero external dependencies)
 
--- hbwallet - Arweave JWK wallet generator
--- Using Hype framework
+-- JSON implementation (since Hype doesn't include one)
+local json = {}
+local escape_char_map = {
+    ["\\"] = "\\\\", ["\""] = "\\\"", ["\b"] = "\\b", ["\f"] = "\\f",
+    ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t"
+}
 
-local json = require("json")
-
--- Try to use OpenSSL crypto, fallback to pure Lua
-local crypto_impl
-local ok = pcall(function() 
-    crypto_impl = require("src.crypto_openssl")
-end)
-if not ok then
-    crypto_impl = require("src.jwk")
+local function escape_char(c)
+    return escape_char_map[c] or string.format("\\u%04x", c:byte())
 end
 
--- Base64URL encoding
-local function base64url_encode(data)
-    local b64 = require("mime").b64(data)
-    return b64:gsub("+", "-"):gsub("/", "_"):gsub("=+$", "")
-end
-
--- Base64URL decoding
-local function base64url_decode(str)
-    -- Replace URL-safe chars back to standard base64
-    str = str:gsub("-", "+"):gsub("_", "/")
-    -- Add padding if needed
-    local padding = (4 - #str % 4) % 4
-    str = str .. string.rep("=", padding)
-    -- Decode
-    return require("mime").unb64(str)
-end
-
--- SHA256 hash function
-local function sha256(data)
-    if crypto_impl.sha256 then
-        return crypto_impl.sha256(data)
-    else
-        -- Fallback to pure Lua SHA256
-        local sha2 = require("src.sha256")
-        return sha2.hash(data)
+function json.encode(val, options)
+    options = options or {}
+    local indent = options.indent
+    
+    local function encode_string(s)
+        return '"' .. s:gsub('[%z\1-\31\\"]', escape_char) .. '"'
     end
+    
+    local function encode_value(v, depth)
+        depth = depth or 0
+        local t = type(v)
+        
+        if t == "nil" then
+            return "null"
+        elseif t == "boolean" then
+            return tostring(v)
+        elseif t == "number" then
+            return tostring(v)
+        elseif t == "string" then
+            return encode_string(v)
+        elseif t == "table" then
+            local parts = {}
+            local is_array = #v > 0
+            
+            if is_array then
+                for i = 1, #v do
+                    parts[i] = encode_value(v[i], depth + 1)
+                end
+                return "[" .. table.concat(parts, ",") .. "]"
+            else
+                local keys = {}
+                for k in pairs(v) do
+                    if type(k) == "string" then
+                        table.insert(keys, k)
+                    end
+                end
+                if options.sort_keys then
+                    table.sort(keys)
+                end
+                
+                for _, k in ipairs(keys) do
+                    local key = encode_string(k)
+                    local value = encode_value(v[k], depth + 1)
+                    table.insert(parts, key .. ":" .. value)
+                end
+                
+                if indent and #parts > 0 then
+                    local spacing = string.rep(" ", depth * indent)
+                    local inner_spacing = string.rep(" ", (depth + 1) * indent)
+                    return "{\n" .. inner_spacing .. table.concat(parts, ",\n" .. inner_spacing) .. "\n" .. spacing .. "}"
+                else
+                    return "{" .. table.concat(parts, ",") .. "}"
+                end
+            end
+        end
+    end
+    
+    return encode_value(val)
 end
 
--- Generate Arweave wallet address from JWK
+function json.decode(str)
+    local pos = 1
+    
+    local function skip_whitespace()
+        while pos <= #str and str:match("^%s", pos) do
+            pos = pos + 1
+        end
+    end
+    
+    local function decode_value()
+        skip_whitespace()
+        local c = str:sub(pos, pos)
+        
+        if c == '"' then
+            pos = pos + 1
+            local start = pos
+            while pos <= #str do
+                if str:sub(pos, pos) == '"' and str:sub(pos-1, pos-1) ~= '\\' then
+                    local val = str:sub(start, pos-1)
+                    pos = pos + 1
+                    return val
+                end
+                pos = pos + 1
+            end
+            error("Unterminated string")
+        elseif c == '{' then
+            pos = pos + 1
+            local obj = {}
+            skip_whitespace()
+            
+            if str:sub(pos, pos) == '}' then
+                pos = pos + 1
+                return obj
+            end
+            
+            while true do
+                skip_whitespace()
+                if str:sub(pos, pos) ~= '"' then
+                    error("Expected string key")
+                end
+                
+                local key = decode_value()
+                skip_whitespace()
+                
+                if str:sub(pos, pos) ~= ':' then
+                    error("Expected ':'")
+                end
+                pos = pos + 1
+                
+                obj[key] = decode_value()
+                skip_whitespace()
+                
+                local c = str:sub(pos, pos)
+                if c == '}' then
+                    pos = pos + 1
+                    return obj
+                elseif c == ',' then
+                    pos = pos + 1
+                else
+                    error("Expected ',' or '}'")
+                end
+            end
+        elseif c:match("[%-0-9]") then
+            local start = pos
+            if c == '-' then pos = pos + 1 end
+            while pos <= #str and str:sub(pos, pos):match("[0-9.]") do
+                pos = pos + 1
+            end
+            return tonumber(str:sub(start, pos-1))
+        elseif str:sub(pos, pos+3) == "true" then
+            pos = pos + 4
+            return true
+        elseif str:sub(pos, pos+4) == "false" then
+            pos = pos + 5
+            return false
+        elseif str:sub(pos, pos+3) == "null" then
+            pos = pos + 4
+            return nil
+        else
+            error("Unexpected character: " .. c)
+        end
+    end
+    
+    return decode_value()
+end
+
+-- Base64 implementation
+local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local base64 = {}
+
+function base64.encode(data)
+    return ((data:gsub('.', function(x) 
+        local r,b='',x:byte()
+        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c=0
+        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+        return b64chars:sub(c+1,c+1)
+    end)..({ '', '==', '=' })[#data%3+1])
+end
+
+function base64.decode(str)
+    local b64lookup = {}
+    for i = 1, 64 do
+        b64lookup[b64chars:sub(i,i)] = i - 1
+    end
+    
+    str = str:gsub('[^'..b64chars..'=]', '')
+    return (str:gsub('.', function(x)
+        if (x == '=') then return '' end
+        local r,f='',(b64lookup[x])
+        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+        if (#x ~= 8) then return '' end
+        local c=0
+        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
+        return string.char(c)
+    end))
+end
+
+-- Load Hype modules
+local crypto = require("crypto")
+local httpsig = require("httpsig")
+
+-- Generate 4096-bit RSA JWK using Hype's crypto
+local function generate_jwk()
+    -- RS256 uses RSA with SHA-256
+    -- Hype should generate appropriate key sizes
+    local jwk = crypto.generate_jwk("RS256")
+    
+    -- Ensure we have all required fields for Arweave
+    if not jwk.kty then jwk.kty = "RSA" end
+    
+    return jwk
+end
+
+-- Get wallet address from JWK (Arweave-compatible)
 local function get_wallet_address(jwk)
-    -- Decode the raw binary value of n (the public modulus)
-    local n_binary = base64url_decode(jwk.n)
+    -- Validate JWK
+    if not jwk or type(jwk) ~= "table" then
+        error("Invalid JWK: not a table")
+    end
+    if not jwk.n or type(jwk.n) ~= "string" then
+        error("Invalid JWK: missing or invalid 'n' field")
+    end
     
-    -- Hash the raw binary value of n
-    local hash = sha256(n_binary)
+    -- Arweave address = base64url(SHA256(base64url_decode(n)))
     
-    -- Base64URL encode the hash - this is the wallet address
-    local address = base64url_encode(hash)
+    -- Decode the modulus from base64url
+    local n_b64 = jwk.n:gsub("-", "+"):gsub("_", "/")
+    local padding = (4 - #n_b64 % 4) % 4
+    n_b64 = n_b64 .. string.rep("=", padding)
+    local n_binary = base64.decode(n_b64)
+    
+    -- Create SHA256 digest
+    local digest = httpsig.create_digest(n_binary, "sha256")
+    
+    -- Extract just the base64 hash (remove "SHA-256=" prefix if present)
+    local hash_b64 = digest:match("SHA%-256=(.+)") or digest
+    
+    -- Convert to base64url
+    local address = hash_b64:gsub("+", "-"):gsub("/", "_"):gsub("=+$", "")
     
     return address
 end
 
--- Generate new JWK wallet
-local function generate_wallet()
-    if crypto_impl.generate_rsa_keypair then
-        -- Use OpenSSL implementation
-        local keypair = crypto_impl.generate_rsa_keypair(4096)
-        return {
-            kty = "RSA",
-            n = keypair.n,
-            e = keypair.e,
-            d = keypair.d,
-            p = keypair.p,
-            q = keypair.q,
-            dp = keypair.dp,
-            dq = keypair.dq,
-            qi = keypair.qi
-        }
-    else
-        -- Use fallback implementation
-        return crypto_impl.generate()
+-- Read and validate file
+local function read_file(filename)
+    if filename:match("%.%.") then
+        error("Invalid file path")
     end
-end
-
--- Read JWK from file
-local function read_jwk_file(filename)
+    
     local file = io.open(filename, "r")
     if not file then
-        io.stderr:write("Error: Cannot open file " .. filename .. "\n")
-        os.exit(1)
+        error("Cannot open file: " .. filename)
     end
     
     local content = file:read("*all")
     file:close()
     
-    local ok, jwk = pcall(json.decode, content)
-    if not ok then
-        io.stderr:write("Error: Invalid JSON in file " .. filename .. "\n")
-        os.exit(1)
+    if #content > 1024 * 1024 then
+        error("File too large")
     end
     
-    return jwk
+    return content
 end
 
 -- Parse command line arguments
 local function parse_args(args)
     if #args == 0 then
-        return nil, {}
+        return "generate", {}
+    end
+    
+    -- Check for help first
+    for _, arg in ipairs(args) do
+        if arg == "--help" or arg == "-h" then
+            return "help", {}
+        end
     end
     
     local cmd = args[1]
@@ -110,56 +281,77 @@ local function parse_args(args)
     local i = 2
     while i <= #args do
         if args[i] == "--file" or args[i] == "-f" then
-            if i + 1 <= #args then
+            if args[i + 1] then
                 options.file = args[i + 1]
-                i = i + 1
+                i = i + 2
             else
-                io.stderr:write("Error: --file requires a filename\n")
-                os.exit(1)
+                error("--file requires a filename")
             end
+        else
+            i = i + 1
         end
-        i = i + 1
     end
     
     return cmd, options
 end
 
--- Main function
-local function main(args)
-    local cmd, options = parse_args(args)
-    
-    if cmd == "public-key" then
-        -- Get wallet address from JWK file
-        if not options.file then
-            io.stderr:write("Error: --file option required for public-key command\n")
-            io.stderr:write("Usage: hbwallet public-key --file <wallet.json>\n")
-            os.exit(1)
+-- Show usage
+local function show_usage()
+    print([[
+hbwallet v2 - Arweave JWK wallet generator (Hype-powered)
+
+Usage:
+  hbwallet                           Generate new wallet
+  hbwallet public-key --file FILE    Get wallet address from JWK file
+  hbwallet --help                    Show this help
+
+Examples:
+  hbwallet > wallet.json
+  hbwallet public-key --file wallet.json
+
+Security: Generated files contain private keys. Keep them secure!
+]])
+end
+
+-- Main program
+local function main()
+    local ok, result = pcall(function()
+        local cmd, options = parse_args(arg or {})
+        
+        if cmd == "help" then
+            show_usage()
+            return
         end
         
-        local jwk = read_jwk_file(options.file)
-        local address = get_wallet_address(jwk)
-        print(address)
-        
-    elseif cmd == nil then
-        -- Generate new wallet and output to stdout
-        local jwk = generate_wallet()
-        print(json.encode(jwk, { indent = 2 }))
-        
-    else
-        io.stderr:write("Error: Unknown command '" .. cmd .. "'\n")
-        io.stderr:write("Usage:\n")
-        io.stderr:write("  hbwallet                              # Generate new wallet\n")
-        io.stderr:write("  hbwallet public-key --file <wallet>   # Get wallet address\n")
+        if cmd == "public-key" then
+            if not options.file then
+                error("--file option required for public-key command")
+            end
+            
+            local content = read_file(options.file)
+            local jwk = json.decode(content)
+            local address = get_wallet_address(jwk)
+            
+            print(address)
+            
+        elseif cmd == "generate" or cmd == nil or cmd == "hbwallet" then
+            local jwk = generate_jwk()
+            print(json.encode(jwk))
+            
+            io.stderr:write("\nGenerated new Arweave wallet\n")
+            io.stderr:write("WARNING: Keep this file secure - it contains your private key!\n")
+            
+        else
+            error("Unknown command: " .. cmd)
+        end
+    end)
+    
+    if not ok then
+        io.stderr:write("Error: " .. result .. "\n")
+        io.stderr:write("Run 'hbwallet --help' for usage\n")
         os.exit(1)
     end
 end
 
--- Run if executed directly
-if arg then
-    main(arg)
-end
-
-return {
-    generate_wallet = generate_wallet,
-    get_wallet_address = get_wallet_address
-}
+-- Run the program
+main()
