@@ -86,10 +86,25 @@ build_with_hype() {
     if command -v hype &> /dev/null; then
         # Extract just the OS part for Hype (darwin, linux, windows)
         local hype_target="${platform%%-*}"
-        hype build main.lua \
+        
+        # Build using the main source file
+        hype build src/hbwallet.lua \
             --output "$output_name" \
             --target "$hype_target"
-        return $?
+        
+        # Check if build succeeded
+        if [ $? -eq 0 ]; then
+            # For Windows, create a batch wrapper
+            if [ "$hype_target" = "windows" ]; then
+                cat > "${output_name}.bat" << EOF
+@echo off
+"%~dp0\\$(basename "$output_name").exe" %*
+EOF
+            fi
+            return 0
+        else
+            return 1
+        fi
     else
         return 1
     fi

@@ -31,15 +31,14 @@ print_error() {
 # Check for dependencies
 print_status "Checking dependencies..."
 
-# Check for Hype
-if command -v hype &> /dev/null; then
-    print_success "Hype framework found"
-    BUILD_CMD="hype build"
-else
-    print_error "Hype framework not found"
-    echo "    Falling back to manual build..."
-    BUILD_CMD="manual"
+# Check for Hype (required)
+if ! command -v hype &> /dev/null; then
+    print_error "Hype framework not found!"
+    echo "    Please install Hype to build and test hbwallet"
+    echo "    Visit: https://github.com/ryanpwaldon/hype"
+    exit 1
 fi
+print_success "Hype framework found"
 
 # Check for Lua/LuaJIT
 if command -v lua &> /dev/null; then
@@ -54,28 +53,15 @@ fi
 echo ""
 
 # Build the project
-print_status "Building hbwallet..."
+print_status "Building hbwallet with Hype..."
 
-if [ "$BUILD_CMD" = "hype build" ]; then
-    # Build with Hype
-    hype build --input src/hbwallet.lua --output hbwallet
-    if [ $? -eq 0 ]; then
-        print_success "Build successful with Hype"
-    else
-        print_error "Hype build failed, trying manual build..."
-        BUILD_CMD="manual"
-    fi
-fi
-
-if [ "$BUILD_CMD" = "manual" ]; then
-    # Manual build - create a shell script wrapper
-    cat > hbwallet << 'EOF'
-#!/usr/bin/env lua
-package.path = package.path .. ";./?.lua"
-require("src.hbwallet")
-EOF
-    chmod +x hbwallet
-    print_success "Build successful (manual)"
+# Build with Hype
+hype build src/hbwallet.lua -o hbwallet
+if [ $? -eq 0 ]; then
+    print_success "Build successful with Hype"
+else
+    print_error "Hype build failed!"
+    exit 1
 fi
 
 # Make sure binary is executable
@@ -90,12 +76,8 @@ echo ""
 # Set up Lua path for tests
 export LUA_PATH="./?.lua;./?/init.lua;$LUA_PATH"
 
-# Run the test suite
-if command -v lua &> /dev/null; then
-    lua test/run_tests.lua
-else
-    luajit test/run_tests.lua
-fi
+# Run the test suite with Hype
+hype run test/run_tests.lua
 
 TEST_EXIT_CODE=$?
 

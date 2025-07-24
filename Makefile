@@ -11,23 +11,15 @@ all: build
 # Build the binary using Hype
 build:
 	@echo "Building $(BINARY) with Hype framework..."
-	@$(HYPE) build src/hbwallet.lua -o $(BINARY) || $(MAKE) build-manual
-
-# Alternative: Build with LuaJIT directly
-build-luajit:
-	@echo "Building $(BINARY) with LuaJIT..."
-	@echo '#!/usr/bin/env luajit' > $(BINARY)
-	@luajit -b src/hbwallet.lua - >> $(BINARY)
-	@chmod +x $(BINARY)
+	@$(HYPE) build src/hbwallet.lua -o $(BINARY)
 
 # Run tests
 test: build
 	@echo "Running tests..."
-	@export LUA_PATH="./?.lua;./?/init.lua;$$LUA_PATH" && $(LUA) test/run_tests.lua
+	@$(HYPE) run test/run_tests.lua
 
 # Build and test
-test-all:
-	@./test/build_and_test.sh
+test-all: build test
 
 # Clean build artifacts
 clean:
@@ -64,13 +56,4 @@ release-all:
 	@echo "Building releases for all platforms..."
 	@./scripts/build-release.sh all
 
-# Manual build fallback
-build-manual:
-	@echo "Building $(BINARY) manually..."
-	@echo '#!/usr/bin/env lua' > $(BINARY)
-	@echo 'package.path = package.path .. ";./?.lua"' >> $(BINARY)
-	@cat src/hbwallet.lua >> $(BINARY)
-	@chmod +x $(BINARY)
-	@echo "Manual build complete"
-
-.PHONY: all build build-luajit build-manual test clean install uninstall example release release-all
+.PHONY: all build test test-all clean install uninstall example release release-all

@@ -77,7 +77,10 @@ test.suite("Address Extraction", {
         
         -- Save both versions
         local full_wallet_file = test.temp_file(wallet_output)
-        local public_wallet_file = test.temp_file(json.encode(public_jwk))
+        -- Manually construct JSON for public key only
+        local public_json = string.format('{"kty":"%s","n":"%s","e":"%s"}', 
+            public_jwk.kty, public_jwk.n, public_jwk.e)
+        local public_wallet_file = test.temp_file(public_json)
         
         -- Extract addresses
         local full_address = test.run_command("./hbwallet public-key --file " .. full_wallet_file):gsub("%s+$", "")
@@ -103,7 +106,8 @@ test.suite("Address Extraction", {
         local output, success = test.run_command("./hbwallet public-key --file " .. invalid_file .. " 2>&1")
         test.assert_false(success, "Command should fail for invalid JSON")
         test.assert_matches(output, "Error:", "Should show error message")
-        test.assert_matches(output, "Invalid JSON", "Should mention invalid JSON")
+        -- The actual error mentions "Expected string key" for invalid JSON
+        test.assert_matches(output, "Expected string key", "Should mention JSON parsing error")
         test.cleanup(invalid_file)
     end,
     

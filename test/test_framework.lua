@@ -125,9 +125,29 @@ end
 
 -- Helper to run command and capture output
 function M.run_command(cmd)
-    local handle = io.popen(cmd .. " 2>&1")
+    -- Ensure stderr is captured
+    if not string.find(cmd, "2>&1") then
+        cmd = cmd .. " 2>&1"
+    end
+    
+    local handle = io.popen(cmd)
     local output = handle:read("*all")
-    local success = handle:close()
+    local result = handle:close()
+    
+    -- Handle different Lua versions and environments
+    local success
+    if type(result) == "number" then
+        -- Hype or Lua 5.1 - returns exit code directly
+        success = result == 0
+    elseif type(result) == "boolean" then
+        -- Old Lua 5.1 - returns boolean
+        success = result
+    else
+        -- Lua 5.2+ - returns multiple values (we already unpacked them)
+        local ok, exit_type, exit_code = result, nil, nil
+        success = ok ~= nil and exit_code == 0
+    end
+    
     return output, success
 end
 

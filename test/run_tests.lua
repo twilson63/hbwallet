@@ -1,6 +1,5 @@
-#!/usr/bin/env lua
-
 -- Main test runner for hbwallet
+-- Compatible with both direct Lua execution and Hype framework
 
 print("==============================================")
 print("           hbwallet Test Suite                ")
@@ -16,8 +15,6 @@ local function check_binary()
         print("\nError: hbwallet binary not found!")
         print("Please build the project first using:")
         print("  make build")
-        print("  or")
-        print("  hype build")
         os.exit(1)
     end
     f:close()

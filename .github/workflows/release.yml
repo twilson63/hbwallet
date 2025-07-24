@@ -33,20 +33,15 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
-      - name: Set up Lua
-        uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: "5.4"
-      
-      - name: Set up LuaRocks
-        uses: leafo/gh-actions-luarocks@v4
-      
-      - name: Install dependencies
+      - name: Install Hype
         run: |
-          luarocks install lua-json
-          luarocks install luacrypto || echo "Optional dependency"
+          # Install Hype framework
+          curl -fsSL https://github.com/ryanpwaldon/hype/releases/latest/download/hype-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/') -o hype
+          chmod +x hype
+          sudo mv hype /usr/local/bin/
+          hype version
       
       - name: Get version
         id: get_version
@@ -79,7 +74,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -107,13 +102,14 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
       
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
-          release_name: hbwallet ${{ steps.get_version.outputs.VERSION }}
+          name: hbwallet ${{ steps.get_version.outputs.VERSION }}
+          files: |
+            release/*.tar.gz
+            release/*.zip
+            release/checksums.txt
           body: |
             # hbwallet ${{ steps.get_version.outputs.VERSION }}
             
@@ -145,16 +141,3 @@ jobs:
             Verify your download with the checksums.txt file.
           draft: false
           prerelease: false
-      
-      - name: Upload release assets
-        run: |
-          for file in release/*.tar.gz release/*.zip release/checksums.txt; do
-            if [ -f "$file" ]; then
-              echo "Uploading $file..."
-              curl -X POST \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Content-Type: application/octet-stream" \
-                --data-binary @"$file" \
-                "${{ steps.create_release.outputs.upload_url }}?name=$(basename $file)"
-            fi
-          done
