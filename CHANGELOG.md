@@ -45,6 +45,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Primes (p, q): 342 chars each (2048 bits)
 - Exponents (dp, dq, qi): 342 chars each (2048 bits)
 
+## [1.3.0] - 2025-07-24
+
+### Fixed
+- Updated to use Hype 1.7.4's native 4096-bit RSA key generation
+- Now generates proper 4096-bit RSA keys for full Arweave compatibility
+- Removed dependency on external OpenSSL for key generation
+
+### Changed
+- Switched from RS256 to PS512 (RSA-PSS with SHA-512) for enhanced security
+- Algorithm provides better cryptographic properties while maintaining compatibility
+
+### Technical Details
+- Uses `crypto.generate_jwk("PS512", 4096)` from Hype 1.7.4+
+- Pure Lua implementation via Hype framework, no external dependencies
+- Verified 512-byte modulus (4096 bits) in generated keys
+- PS512 uses RSA-PSS padding scheme with SHA-512 hash
+
 ## [Unreleased]
 
 ### Planned Features

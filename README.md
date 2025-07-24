@@ -99,7 +99,7 @@ arweave deploy --key-file my-arweave-wallet.json
 
 ### Key Specifications
 
-- **Algorithm**: RSA
+- **Algorithm**: RSA with PS512 (RSA-PSS with SHA-512)
 - **Key Size**: 4096 bits
 - **Public Exponent**: 65537 (0x10001)
 - **Format**: JSON Web Key (JWK)

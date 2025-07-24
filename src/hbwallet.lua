@@ -201,9 +201,10 @@ local httpsig = require("httpsig")
 
 -- Generate 4096-bit RSA JWK using Hype's crypto
 local function generate_jwk()
-    -- RS256 uses RSA with SHA-256
-    -- Hype should generate appropriate key sizes
-    local jwk = crypto.generate_jwk("RS256")
+    -- Generate 4096-bit RSA key for Arweave compatibility
+    -- Using PS512 (RSA-PSS with SHA-512) for enhanced security
+    -- Hype 1.7.4+ supports custom key sizes
+    local jwk = crypto.generate_jwk("PS512", 4096)
     
     -- Ensure we have all required fields for Arweave
     if not jwk.kty then jwk.kty = "RSA" end

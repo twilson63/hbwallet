@@ -1,7 +1,7 @@
 -- Tests for JWK generation and validation
 
 local test = require("test.test_framework")
-local json = require("json")
+local json = require("test.json")
 
 -- Test JWK generation
 test.suite("JWK Generation", {
@@ -48,14 +48,14 @@ test.suite("JWK Generation", {
         test.assert_equals(jwk.e, "AQAB", "Public exponent should be standard 65537")
     end,
     
-    ["Modulus has correct length for 2048-bit key"] = function()
+    ["Modulus has correct length for 4096-bit key"] = function()
         local output = test.run_command("./hbwallet")
         local jwk = json.decode(output)
         
-        -- For a 2048-bit RSA key, the modulus should be about 342-344 chars in base64
+        -- For a 4096-bit RSA key, the modulus should be about 683-684 chars in base64
         local n_length = #jwk.n
-        test.assert_true(n_length >= 340 and n_length <= 345, 
-            "Modulus length should be appropriate for 2048-bit key")
+        test.assert_true(n_length >= 682 and n_length <= 685, 
+            "Modulus length should be appropriate for 4096-bit key (got " .. n_length .. ")")
     end,
     
     ["Multiple generations create different keys"] = function()

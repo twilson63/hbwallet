@@ -1,7 +1,7 @@
 -- Tests for RSA signature verification using Hype crypto library
 
 local test = require("test.test_framework")
-local json = require("json")
+local json = require("test.json")
 
 -- Crypto module for signature verification
 local crypto_verify = {}
@@ -19,7 +19,7 @@ end
 function crypto_verify.create_verify_script(jwk_file)
     -- Create a Lua script that uses the wallet to sign and verify
     local script_content = [[
-local json = require("json")
+local json = require("test.json")
 local crypto = require("src.crypto_openssl")
 local mime = require("mime")
 

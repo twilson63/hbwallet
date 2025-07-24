@@ -1,7 +1,7 @@
 -- Tests for 43-character address extraction
 
 local test = require("test.test_framework")
-local json = require("json")
+local json = require("test.json")
 
 test.suite("Address Extraction", {
     ["Extract address from wallet file"] = function()
